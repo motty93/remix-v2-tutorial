@@ -1,19 +1,24 @@
-import { Form } from '@remix-run/react'
+import { json, LoaderFunction, LoaderFunctionArgs } from '@remix-run/node'
+import { Form, useLoaderData } from '@remix-run/react'
 import type { FunctionComponent } from 'react'
 
-import type { ContactRecord } from '../data'
+import { type ContactRecord, getContact } from '../data'
+import invariant from 'tiny-invariant'
+
+export const loader: LoaderFunction = async ({ params }: LoaderFunctionArgs ) => {
+  invariant(params.contactId, 'missing contactId param')
+	const contact = await getContact(String(params.contactId))
+  if (!contact) {
+    throw new Response("Not found contact", { status: 404 })
+  }
+
+	return json({ contact })
+}
 
 export default function Contact() {
-	const contact = {
-		first: 'Your',
-		last: 'Name',
-		avatar: 'https://placecats.com/200/200',
-		twitter: 'your_handle',
-		notes: 'Some notes',
-		favorite: true,
-	}
+	const { contact } = useLoaderData<typeof loader>()
 
-	return (
+	return contact ? (
 		<div id='contact'>
 			<div>
 				<img
@@ -35,15 +40,15 @@ export default function Contact() {
 					<Favorite contact={contact} />
 				</h1>
 
-				{contact.twitter ? (
+				{contact.twitter && (
 					<p>
 						<a href={`https://twitter.com/${contact.twitter}`}>
 							{contact.twitter}
 						</a>
 					</p>
-				) : null}
+				)}
 
-				{contact.notes ? <p>{contact.notes}</p> : null}
+				{contact.notes && <p>{contact.notes}</p>}
 
 				<div>
 					<Form action='edit'>
@@ -67,6 +72,8 @@ export default function Contact() {
 				</div>
 			</div>
 		</div>
+	) : (
+		<></>
 	)
 }
 
